@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M HUB — MCHOSE Ace 68 / Ace 68 Air (Native Go Offline)</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="mhub-app">
+    <!-- Left Sidebar (Official M HUB Light Layout) -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="device-header">
+          <button class="icon-circle" id="btn-reconnect" title="Reconnect USB Keyboard">&#x21BB;</button>
+          <h1 id="device-title">Ace 68</h1>
+        </div>
+        <div class="conn-row">
+          <span class="conn-badge" id="conn-badge" title="Click to manage connected MCHOSE devices" style="cursor:pointer">
+            <i class="conn-dot"></i>
+            <span id="conn-label">Connecting...</span>
+          </span>
+          <span class="latency-pill" id="latency-pill">Go Native HID</span>
+        </div>
+
+        <button class="cap-btn cap-connect" id="btn-connect-device">
+          <span>&#x1F50C; Connect / Switch Device</span>
+        </button>
+        <button class="cap-btn cap-full" id="btn-apply-now">
+          <span>&#10003; Apply Selected Changes</span>
+        </button>
+        <div class="cap-grid-2">
+          <button class="cap-btn" id="btn-export">&#8681; Export</button>
+          <label class="cap-btn">
+            &#8679; Import
+            <input type="file" id="input-import" accept=".json" hidden />
+          </label>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sec-head">
+          <span>Onboard Profiles</span>
+          <span class="counter-pill" id="profile-counter">3/3</span>
+        </div>
+        <div class="profile-list" id="onboard-list">
+          <div class="prof-row active" data-prof="0">
+            <button class="prof-item active" data-prof="0">
+              <span class="prof-icon">&#9638;</span>
+              <span class="prof-name">Profile 1</span>
+            </button>
+            <button class="prof-edit" data-edit-prof="0" title="Rename onboard profile">&#9998;</button>
+          </div>
+          <div class="prof-row" data-prof="1">
+            <button class="prof-item" data-prof="1">
+              <span class="prof-icon">&#9638;</span>
+              <span class="prof-name">Profile 2</span>
+            </button>
+            <button class="prof-edit" data-edit-prof="1" title="Rename onboard profile">&#9998;</button>
+          </div>
+          <div class="prof-row" data-prof="2">
+            <button class="prof-item" data-prof="2">
+              <span class="prof-icon">&#9638;</span>
+              <span class="prof-name">Profile 3</span>
+            </button>
+            <button class="prof-edit" data-edit-prof="2" title="Rename onboard profile">&#9998;</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sec-head">
+          <span>Quick Presets</span>
+        </div>
+        <div class="preset-pills">
+          <button class="preset-item" data-preset="cs2">
+            <strong>CS2 / Valorant Pro (WASD)</strong>
+            <span>WASD 0.10mm · RT 0.04mm</span>
+          </button>
+          <button class="preset-item" data-preset="balanced">
+            <strong>Balanced Competitive</strong>
+            <span>All Keys 0.80mm · RT 0.15mm</span>
+          </button>
+          <button class="preset-item" data-preset="typing">
+            <strong>Daily Typing</strong>
+            <span>All Keys 1.50mm · RT Off</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Right Content Area -->
+    <main class="main-area">
+      <!-- Top Navigation Bar (All 6 Official Tabs) -->
+      <header class="top-nav">
+        <nav class="nav-tabs">
+          <button class="nav-tab" data-tab="lighting">&#9728; Lighting</button>
+          <button class="nav-tab active" data-tab="trigger">&#9889; Trigger</button>
+          <button class="nav-tab" data-tab="keymap">&#9000; Key Mapping</button>
+          <button class="nav-tab" data-tab="advanced">&#9881; Advanced Keys</button>
+          <button class="nav-tab" data-tab="performance">&#9889; Performance</button>
+          <button class="nav-tab" data-tab="other">&#9881; Other Settings</button>
+        </nav>
+        <div class="nav-right">
+          <span class="live-travel-badge" id="live-travel-badge" style="display:none">Live: 0.00 mm</span>
+          <span class="model-chip" id="model-chip">MCHOSE Ace 68</span>
+        </div>
+      </header>
+
+      <!-- Live Calibration Banner (visible during active calibration) -->
+      <div class="cal-banner" id="cal-banner" style="display:none">
+        <div>
+          <strong>Switch Calibration Active</strong> — Press every key firmly down to bottom-out until it turns green (<span id="cal-count">0</span>/68 calibrated)
+        </div>
+        <div class="cal-banner-btns">
+          <button class="pill-outline" id="btn-cal-restart">Restart</button>
+          <button class="pill-dark" id="btn-cal-finish">Save &amp; Exit Calibration</button>
+        </div>
+      </div>
+
+      <!-- Shared Interactive 68-Key Chassis Stage -->
+      <section class="stage-area" id="keyboard-stage-wrap">
+        <div class="stage-left" id="preview-mode-box">
+          <div class="stage-label">Preview display</div>
+          <button class="preview-opt active" data-pview="ap">Actuation Distance</button>
+          <button class="preview-opt" data-pview="rt">Quick Trigger (RT)</button>
+          <button class="preview-opt" data-pview="dz">Dead Zone</button>
+          <div class="divider" style="margin:4px 0"></div>
+          <label class="live-test-toggle">
+            <input type="checkbox" id="chk-live-travel" />
+            <span>Live Travel Test</span>
+          </label>
+        </div>
+
+        <div class="chassis-outer">
+          <div class="chassis-bezel" id="keyboard-chassis"></div>
+        </div>
+
+        <!-- Live HID Switch Travel Visualizer (shown when Live Travel Test or Calibration is active) -->
+        <div class="live-hid-card" id="live-hid-card" style="display:none">
+          <div class="live-hid-head">
+            <span class="sub-bold">HID Travel Monitor</span>
+            <span class="live-trig-pill" id="live-hid-state">IDLE</span>
+          </div>
+          <div class="live-hid-stage">
+            <div class="mech-viz">
+              <div class="mech-cap" id="live-mech-cap"><span id="live-hid-key">--</span></div>
+              <div class="mech-stem" id="live-mech-stem"></div>
+              <div class="mech-housing">
+                <div class="mech-ap-line" id="live-mech-ap"></div>
+              </div>
+            </div>
+            <div class="live-meter-wrap">
+              <div class="v-ruler">
+                <span>0.0</span><span>1.0</span><span>2.0</span><span id="live-meter-max">3.4</span>
+              </div>
+              <div class="live-meter-track">
+                <div class="live-meter-fill" id="live-meter-fill"></div>
+                <div class="live-meter-ap" id="live-meter-ap" title="Actuation Point"></div>
+              </div>
+            </div>
+          </div>
+          <div class="live-hid-stats">
+            <div><span class="tiny-muted">Depth</span><strong id="live-hid-mm">0.00 mm</strong></div>
+            <div><span class="tiny-muted">Peak</span><strong id="live-hid-peak">0.00 mm</strong></div>
+          </div>
+        </div>
+
+        <div class="stage-actions" id="stage-select-actions">
+          <button class="side-act-btn" id="sel-wasd">Select WASD</button>
+          <button class="side-act-btn" id="sel-all">Key for full selection</button>
+          <button class="side-act-btn" id="sel-inv">Key for inverse selection</button>
+          <button class="side-act-btn" id="sel-none">Cancel the selection</button>
+          <button class="side-act-btn" id="sel-reset-trig">Restore defaults</button>
+        </div>
+      </section>
+
+      <!-- Bottom Panels Container -->
+      <div class="panels-wrap">
+        <!-- TAB: TRIGGER (3-Card Official Layout) -->
+        <section class="tab-view active" id="view-trigger">
+          <div class="cards-3">
+            <!-- Card 1: Actuation Distance -->
+            <div class="panel-card">
+              <div class="card-title">Actuation Distance</div>
+              <div class="card-sub">Set actuation point for selected keys (<span id="sel-count-label">0</span> selected)</div>
+
+              <div class="switch-row">
+                <select id="switch-select" class="m-select"></select>
+                <button class="pill-outline" id="btn-cal-modal">Switch calibration</button>
+              </div>
+
+              <div class="actuation-visual">
+                <div class="v-stem-box">
+                  <div class="v-ruler">
+                    <span>0.10</span><span>1.00</span><span>2.00</span><span id="ruler-max">3.40</span>
+                  </div>
+                  <div class="v-track">
+                    <div class="v-fill" id="v-ap-fill"></div>
+                    <div class="v-live-line" id="v-live-line" style="display:none"></div>
+                  </div>
+                </div>
+                <div class="ap-slider-col">
+                  <div class="val-row">
+                    <span>Travel Point</span>
+                    <span class="num-pill"><span id="lbl-ap">1.00</span> mm</span>
+                  </div>
+                  <input type="range" id="rng-ap" min="10" max="340" step="1" value="100" />
+                  <div class="hint-ends"><span>Fast (0.10mm)</span><span id="hint-max-ap">Deep (3.40mm)</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Quick Trigger (RT) -->
+            <div class="panel-card">
+              <div class="card-head-flex">
+                <div>
+                  <div class="card-title">Quick Trigger (RT)</div>
+                  <div class="card-sub">Dynamically adjust actuation &amp; reset point</div>
+                </div>
+                <label class="m-switch">
+                  <input type="checkbox" id="chk-rt" />
+                  <span class="m-track"></span>
+                </label>
+              </div>
+
+              <div id="rt-body" class="rt-body">
+                <div class="slider-group">
+                  <div class="val-row">
+                    <span>Press Sensitivity (Trigger)</span>
+                    <span class="num-pill"><span id="lbl-rt-p">0.15</span> mm</span>
+                  </div>
+                  <div class="hl-row">
+                    <span class="hl-tag">High</span>
+                    <input type="range" id="rng-rt-p" min="1" max="200" step="1" value="15" />
+                    <span class="hl-tag">Low</span>
+                  </div>
+                </div>
+
+                <div class="slider-group" id="rt-rel-group">
+                  <div class="val-row">
+                    <span>Release Sensitivity (Reset)</span>
+                    <span class="num-pill"><span id="lbl-rt-r">0.15</span> mm</span>
+                  </div>
+                  <div class="hl-row">
+                    <span class="hl-tag">High</span>
+                    <input type="range" id="rng-rt-r" min="1" max="200" step="1" value="15" />
+                    <span class="hl-tag">Low</span>
+                  </div>
+                </div>
+
+                <div class="inline-toggle">
+                  <span>Set press/release sensitivity separately</span>
+                  <label class="m-switch sm">
+                    <input type="checkbox" id="chk-rt-sep" checked />
+                    <span class="m-track"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Advanced Settings (Berserk + Deadzone) -->
+            <div class="panel-card">
+              <div class="card-title">Advanced Settings</div>
+              <div class="card-sub">Customize key dead zone and ultra-fast scan</div>
+
+              <div class="inline-toggle">
+                <div>
+                  <div class="sub-bold">Berserk Mode</div>
+                  <div class="tiny-muted">Extreme sensitivity &amp; low-latency scan priority</div>
+                </div>
+                <label class="m-switch">
+                  <input type="checkbox" id="chk-berserk-trig" />
+                  <span class="m-track"></span>
+                </label>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="sub-bold" style="margin-bottom:4px">Key Deadzone</div>
+              <div class="tiny-muted" style="margin-bottom:10px">Top prevents accidental touches; bottom prevents chattering</div>
+
+              <div class="slider-group">
+                <div class="val-row">
+                  <span>Top Dead Zone</span>
+                  <span class="num-pill"><span id="lbl-dz-t">0.15</span> mm</span>
+                </div>
+                <input type="range" id="rng-dz-t" min="0" max="100" step="1" value="15" />
+              </div>
+
+              <div class="slider-group">
+                <div class="val-row">
+                  <span>Bottom Dead Zone</span>
+                  <span class="num-pill"><span id="lbl-dz-b">0.15</span> mm</span>
+                </div>
+                <input type="range" id="rng-dz-b" min="0" max="100" step="1" value="15" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: LIGHTING (3-Card Official Layout + Enable Switch + Per-Key Custom RGB) -->
+        <section class="tab-view" id="view-lighting">
+          <div class="cards-3">
+            <div class="panel-card">
+              <div class="card-head-flex">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div class="card-title" style="margin-bottom:0">Lighting effects</div>
+                  <label class="m-switch sm" title="Enable / Disable Lighting Effects">
+                    <input type="checkbox" id="chk-light-enable" />
+                    <span class="m-track"></span>
+                  </label>
+                  <span class="light-state-tag" id="lbl-light-state">OFF</span>
+                </div>
+                <div class="seg-group">
+                  <button class="seg-btn active" data-lscope="main">Main RGB</button>
+                  <button class="seg-btn" data-lscope="side">Side Lightbox</button>
+                </div>
+              </div>
+              <div class="effects-grid" id="effects-grid"></div>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-title">Speed and brightness</div>
+              <div class="card-sub">Real-time hardware backlight tuning</div>
+
+              <div class="slider-group" style="margin-top:10px">
+                <div class="val-row">
+                  <span>Speed</span>
+                  <span class="num-pill"><span id="lbl-l-speed">3</span> / 4</span>
+                </div>
+                <input type="range" id="rng-l-speed" min="0" max="4" step="1" value="3" />
+              </div>
+
+              <div class="slider-group">
+                <div class="val-row">
+                  <span>Brightness</span>
+                  <span class="num-pill"><span id="lbl-l-bright">4</span> / 4</span>
+                </div>
+                <input type="range" id="rng-l-bright" min="0" max="4" step="1" value="4" />
+              </div>
+
+              <div class="inline-toggle" style="margin-top:8px">
+                <span>Reverse Direction</span>
+                <label class="m-switch sm">
+                  <input type="checkbox" id="chk-l-dir" />
+                  <span class="m-track"></span>
+                </label>
+              </div>
+
+              <div id="perkey-tools" class="perkey-tools" style="display:none">
+                <div class="divider"></div>
+                <div class="sub-bold" style="margin-bottom:6px">Per-Key Custom RGB Painter</div>
+                <div class="perkey-btn-row">
+                  <button class="pill-dark" id="btn-paint-sel">Paint Selected</button>
+                  <button class="pill-outline" id="btn-paint-all">Fill All</button>
+                  <button class="pill-outline" id="btn-paint-clear">All Off</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-head-flex">
+                <div class="card-title">Color palette</div>
+                <label class="inline-check">
+                  <input type="checkbox" id="chk-l-rainbow" /> Rainbow
+                </label>
+              </div>
+              <div class="palette-box">
+                <input type="color" id="inp-l-color" value="#00d4ff" class="big-color-wheel" />
+                <div class="hex-line">
+                  <span>HEX</span>
+                  <strong id="lbl-l-hex">#00D4FF</strong>
+                </div>
+                <div class="swatch-dots" id="swatch-dots">
+                  <button data-c="#ff3b30" style="background:#ff3b30"></button>
+                  <button data-c="#ff9500" style="background:#ff9500"></button>
+                  <button data-c="#ffcc00" style="background:#ffcc00"></button>
+                  <button data-c="#34c759" style="background:#34c759"></button>
+                  <button data-c="#00d4ff" style="background:#00d4ff"></button>
+                  <button data-c="#007aff" style="background:#007aff"></button>
+                  <button data-c="#af52de" style="background:#af52de"></button>
+                  <button data-c="#ff2d55" style="background:#ff2d55"></button>
+                  <button data-c="#ffffff" style="background:#ffffff;border:1px solid #ccc"></button>
+                  <button data-c="#000000" style="background:#111111"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: KEY MAPPING (4 Official Layers + Correct Modifiers) -->
+        <section class="tab-view" id="view-keymap">
+          <div class="panel-card">
+            <div class="card-head-flex">
+              <div>
+                <div class="card-title">Key Mapping</div>
+                <div class="card-sub">Select a key above, then click a key below to remap immediately. Selected: <strong id="remap-sel-name">None</strong></div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <button class="pill-outline" id="btn-remap-restore">Restore Key Default</button>
+                <div class="seg-group" id="layer-tabs">
+                  <button class="seg-btn active" data-layer="0">Win Default</button>
+                  <button class="seg-btn" data-layer="1">Win Fn</button>
+                  <button class="seg-btn" data-layer="2">Mac Default</button>
+                  <button class="seg-btn" data-layer="3">Mac Fn</button>
+                </div>
+              </div>
+            </div>
+            <div id="keypicker-container" class="keypicker-container"></div>
+          </div>
+        </section>
+
+        <!-- TAB: ADVANCED KEYS (1:1 Official M HUB 3-Column aks-panel + 88x88 Slot Drawers) -->
+        <section class="tab-view" id="view-advanced">
+          <div class="aks-panel" id="aks-panel">
+            <!-- Column 1: Official Magnetic Advanced Keys Function List -->
+            <div class="panel-card aks-col">
+              <div class="card-title">Advanced Keys</div>
+              <div class="card-sub">Select a function to configure key behavior</div>
+              <div class="aks-feature-list">
+                <button class="aks-feature-item" data-aks-open="rs">
+                  <span class="aks-icon aks-icon--rs">RS</span>
+                  <div class="aks-feature-body">
+                    <div class="aks-feature-title">Rappy Snappy (RS)</div>
+                    <div class="aks-feature-desc">Monitors 2 keys; whichever key is pressed deeper dynamically activates.</div>
+                  </div>
+                </button>
+                <button class="aks-feature-item" data-aks-open="socd">
+                  <span class="aks-icon aks-icon--socd">SOCD</span>
+                  <div class="aks-feature-body">
+                    <div class="aks-feature-title">SOCD (Snap Tap)</div>
+                    <div class="aks-feature-desc">When two keys are pressed simultaneously, trigger input by priority rule.</div>
+                  </div>
+                </button>
+                <button class="aks-feature-item" data-aks-open="dks">
+                  <span class="aks-icon aks-icon--dks">DKS</span>
+                  <div class="aks-feature-body">
+                    <div class="aks-feature-title">Dynamic Keystroke (DKS)</div>
+                    <div class="aks-feature-desc">Bind 1–4 actions to a single key across press &amp; release travel depths.</div>
+                  </div>
+                </button>
+                <button class="aks-feature-item" data-aks-open="mt">
+                  <span class="aks-icon aks-icon--mt">MT</span>
+                  <div class="aks-feature-body">
+                    <div class="aks-feature-title">Hold / Tap (MT)</div>
+                    <div class="aks-feature-desc">Single key dual action: Hold for one key, Tap for another key.</div>
+                  </div>
+                </button>
+                <button class="aks-feature-item" data-aks-open="tgl">
+                  <span class="aks-icon aks-icon--tgl">TGL</span>
+                  <div class="aks-feature-body">
+                    <div class="aks-feature-title">Toggle Key (TGL)</div>
+                    <div class="aks-feature-desc">Tap once for continuous hold, tap again to release.</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Column 2: Current Binding X/40 -->
+            <div class="panel-card aks-col">
+              <div class="card-head-flex" style="margin-bottom:10px">
+                <div class="card-title" style="margin-bottom:0">Current Binding <span class="counter-pill" id="aks-bind-count">0/40</span></div>
+                <button class="pill-outline danger" id="btn-adv-clear-all" style="padding:3px 10px;font-size:11px">Clear All</button>
+              </div>
+              <div id="adv-bindings-list" class="aks-bind-list">
+                <div class="tiny-muted">No advanced keys bound on this layer.</div>
+              </div>
+            </div>
+
+            <!-- Column 3: Test Your Binding (Press Test + Release Test) -->
+            <div class="panel-card aks-col">
+              <div class="card-head-flex" style="margin-bottom:10px">
+                <div class="card-title" style="margin-bottom:0">Test Your Binding</div>
+                <button class="pill-outline" id="btn-aks-test-clear" style="padding:3px 10px;font-size:11px">Clear</button>
+              </div>
+              <div class="aks-test-list">
+                <div class="aks-test-section">
+                  <div class="aks-test-title">Press Test</div>
+                  <div class="aks-test-box" id="aks-test-press">
+                    <span class="tiny-muted aks-test-hint">Press keys to test output...</span>
+                  </div>
+                </div>
+                <div class="aks-test-section">
+                  <div class="aks-test-title">Release Test</div>
+                  <div class="aks-test-box" id="aks-test-release">
+                    <span class="tiny-muted aks-test-hint">Release keys to test output...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Official Slide-Over Editor Drawer (88x88 Square Key Slots + 42x42 Key Picker) -->
+            <div class="aks-drawer" id="aks-drawer" style="display:none">
+              <div class="aks-drawer-head">
+                <div>
+                  <div class="card-title" id="aks-drawer-title" style="margin-bottom:2px">Edit Advanced Key</div>
+                  <div class="tiny-muted" id="aks-drawer-desc">Select a slot, then click a key on the keyboard above</div>
+                </div>
+                <div class="aks-drawer-actions">
+                  <button class="pill-outline" id="btn-aks-cancel">Cancel</button>
+                  <button class="pill-dark" id="btn-aks-save">Save</button>
+                </div>
+              </div>
+
+              <div class="aks-drawer-workspace">
+                <!-- RS Body -->
+                <div class="aks-drawer-body aks-drawer-body--center" id="aks-body-rs" style="display:none">
+                  <div class="aks-drawer-col">
+                    <div class="aks-slot-pair">
+                      <div class="aks-key-slot">
+                        <div class="aks-key-slot__label">Key 1</div>
+                        <div class="aks-key-slot__box" id="slot-rs-1" data-slot="rs1">
+                          <span id="slot-rs-1-val">A</span>
+                          <button type="button" class="aks-key-slot__clear" data-clear-slot="rs1" title="Clear">&times;</button>
+                        </div>
+                      </div>
+                      <div class="aks-key-slot">
+                        <div class="aks-key-slot__label">Key 2</div>
+                        <div class="aks-key-slot__box" id="slot-rs-2" data-slot="rs2">
+                          <span id="slot-rs-2-val">D</span>
+                          <button type="button" class="aks-key-slot__clear" data-clear-slot="rs2" title="Clear">&times;</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tiny-muted" style="margin-top:12px">Click a slot above, then click a key on the top keyboard</div>
+                    <div class="adv-btn-row" style="margin-top:8px">
+                      <button class="pill-outline" id="btn-rs-ad">Quick A + D</button>
+                      <button class="pill-outline" id="btn-rs-ws">Quick W + S</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SOCD Body -->
+                <div class="aks-drawer-body" id="aks-body-socd" style="display:none">
+                  <div class="aks-drawer-col">
+                    <div class="aks-slot-pair">
+                      <div class="aks-key-slot">
+                        <div class="aks-key-slot__label">Key 1</div>
+                        <div class="aks-key-slot__box" id="slot-socd-1" data-slot="socd1">
+                          <span id="slot-socd-1-val">A</span>
+                          <button type="button" class="aks-key-slot__clear" data-clear-slot="socd1" title="Clear">&times;</button>
+                        </div>
+                      </div>
+                      <div class="aks-key-slot">
+                        <div class="aks-key-slot__label">Key 2</div>
+                        <div class="aks-key-slot__box" id="slot-socd-2" data-slot="socd2">
+                          <span id="slot-socd-2-val">D</span>
+                          <button type="button" class="aks-key-slot__clear" data-clear-slot="socd2" title="Clear">&times;</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tiny-muted" style="margin-top:12px">Click a slot, then click a key on the top keyboard</div>
+                    <div class="adv-btn-row" style="margin-top:8px">
+                      <button class="pill-outline" id="btn-socd-ad">Quick A + D</button>
+                      <button class="pill-outline" id="btn-socd-ws">Quick W + S</button>
+                    </div>
+                  </div>
+                  <div class="aks-drawer-divider"></div>
+                  <div class="aks-drawer-col aks-drawer-col--start">
+                    <div class="aks-trigger">
+                      <div class="aks-trigger__title">Trigger Priority Mode</div>
+                      <div class="aks-trigger__list" id="socd-prio-list">
+                        <label class="aks-trigger__item active"><input type="radio" name="socd-prio" value="0" checked /><span>Last Input Priority (Latest key overrides)</span></label>
+                        <label class="aks-trigger__item"><input type="radio" name="socd-prio" value="1" /><span>Key 1 Absolute Priority</span></label>
+                        <label class="aks-trigger__item"><input type="radio" name="socd-prio" value="2" /><span>Key 2 Absolute Priority</span></label>
+                        <label class="aks-trigger__item"><input type="radio" name="socd-prio" value="3" /><span>Neutral Mode (Both pressed = cancel)</span></label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DKS Body (Official 3-Column: 88x88 Key + 4x4 Press/Lift Matrix + 42x42 Remap Picker) -->
+                <div class="aks-drawer-body" id="aks-body-dks" style="display:none">
+                  <div class="aks-drawer-col aks-dks-binding-col">
+                    <div class="aks-key-slot">
+                      <div class="aks-key-slot__label">Bind Key</div>
+                      <div class="aks-key-slot__box" id="slot-dks-key" data-slot="dksKey">
+                        <span id="slot-dks-key-val">+</span>
+                        <button type="button" class="aks-key-slot__clear" data-clear-slot="dksKey" title="Clear">&times;</button>
+                      </div>
+                    </div>
+                    <div class="tiny-muted" style="text-align:center;margin-top:8px">Click keyboard above</div>
+                  </div>
+                  <div class="aks-drawer-divider"></div>
+                  <div class="aks-dks-matrix-col">
+                    <div class="aks-dks-phases-head">
+                      <div class="aks-dks-key-head">Key</div>
+                      <div class="aks-dks-phase-card press">
+                        <div class="aks-dks-phase-title">Key Press (mm)</div>
+                        <div class="aks-dks-pts">
+                          <label title="Shallow press point">
+                            <input type="number" id="dks-p1" min="0.1" max="3.2" step="0.1" value="1.0" />
+                          </label>
+                          <label title="Deep press point">
+                            <input type="number" id="dks-p2" min="0.2" max="3.3" step="0.1" value="3.0" />
+                          </label>
+                        </div>
+                      </div>
+                      <div class="aks-dks-phase-card lift">
+                        <div class="aks-dks-phase-title">Key Release (mm)</div>
+                        <div class="aks-dks-pts">
+                          <span id="lbl-dks-r1">3.00</span>
+                          <span id="lbl-dks-r2">1.00</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="aks-dks-rows" id="dks-matrix-rows"></div>
+                  </div>
+                </div>
+
+                <!-- MT Body (Official 3-Column: 88x88 Key + Hold/Tap 88x88 + Slider + Remap Picker) -->
+                <div class="aks-drawer-body" id="aks-body-mt" style="display:none">
+                  <div class="aks-drawer-col aks-dks-binding-col">
+                    <div class="aks-key-slot">
+                      <div class="aks-key-slot__label">Bind Key</div>
+                      <div class="aks-key-slot__box" id="slot-mt-key" data-slot="mtKey">
+                        <span id="slot-mt-key-val">+</span>
+                        <button type="button" class="aks-key-slot__clear" data-clear-slot="mtKey" title="Clear">&times;</button>
+                      </div>
+                    </div>
+                    <div class="tiny-muted" style="text-align:center;margin-top:8px">Click keyboard above</div>
+                  </div>
+                  <div class="aks-drawer-divider"></div>
+                  <div class="aks-drawer-col">
+                    <div class="aks-editor">
+                      <div class="aks-mt-keys">
+                        <div class="aks-key-slot">
+                          <div class="aks-key-slot__label">Hold</div>
+                          <div class="aks-key-slot__box" id="slot-mt-hold" data-slot="mtHold">
+                            <span id="slot-mt-hold-val">+</span>
+                            <button type="button" class="aks-key-slot__clear" data-clear-slot="mtHold" title="Clear">&times;</button>
+                          </div>
+                        </div>
+                        <div class="aks-key-slot">
+                          <div class="aks-key-slot__label">Tap</div>
+                          <div class="aks-key-slot__box" id="slot-mt-tap" data-slot="mtTap">
+                            <span id="slot-mt-tap-val">+</span>
+                            <button type="button" class="aks-key-slot__clear" data-clear-slot="mtTap" title="Clear">&times;</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="aks-mt-meta">
+                        <div class="aks-mt-meta__title">Hold Trigger Time</div>
+                        <div class="aks-mt-meta__row">
+                          <input type="range" id="mt-time" min="10" max="1000" step="10" value="150" />
+                          <span class="aks-mt-meta__value"><span id="lbl-mt-time">150</span>ms</span>
+                        </div>
+                        <div class="tiny-muted">Shorter than hold time triggers Tap; longer triggers Hold</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- TGL Body (Official 3-Column: 88x88 Key + 88x88 TGL Target + Remap Picker) -->
+                <div class="aks-drawer-body" id="aks-body-tgl" style="display:none">
+                  <div class="aks-drawer-col aks-dks-binding-col">
+                    <div class="aks-key-slot">
+                      <div class="aks-key-slot__label">Bind Key</div>
+                      <div class="aks-key-slot__box" id="slot-tgl-key" data-slot="tglKey">
+                        <span id="slot-tgl-key-val">+</span>
+                        <button type="button" class="aks-key-slot__clear" data-clear-slot="tglKey" title="Clear">&times;</button>
+                      </div>
+                    </div>
+                    <div class="tiny-muted" style="text-align:center;margin-top:8px">Click keyboard above</div>
+                  </div>
+                  <div class="aks-drawer-divider"></div>
+                  <div class="aks-drawer-col">
+                    <div class="aks-key-slot">
+                      <div class="aks-key-slot__label">TGL</div>
+                      <div class="aks-key-slot__box" id="slot-tgl-out" data-slot="tglOut">
+                        <span id="slot-tgl-out-val">+</span>
+                        <button type="button" class="aks-key-slot__clear" data-clear-slot="tglOut" title="Clear">&times;</button>
+                      </div>
+                    </div>
+                    <div class="tiny-muted" style="text-align:center;margin-top:8px">Pick output key on the right</div>
+                  </div>
+                </div>
+
+                <!-- Shared Official Right Column: 42x42 Searchable Key Picker (used by DKS, MT, TGL) -->
+                <div class="aks-remap-wrap" id="aks-remap-col" style="display:none">
+                  <div class="aks-drawer-divider"></div>
+                  <div class="aks-drawer-col--remap">
+                    <div class="aks-remap__search">
+                      <input type="search" id="aks-remap-search" placeholder="Search key to assign..." />
+                    </div>
+                    <div class="aks-remap__list" id="aks-remap-list"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: PERFORMANCE (Exact GLW Polling Rates & Stability Controls) -->
+        <section class="tab-view" id="view-performance">
+          <div class="cards-2">
+            <div class="panel-card">
+              <div class="card-title">USB Polling Rate (Hz)</div>
+              <div class="card-sub">Higher polling rates reduce USB input latency down to 0.125 ms (8000 Hz)</div>
+              <div class="rate-pills" id="rate-pills">
+                <button class="rate-pill" data-rate="4">1000 Hz</button>
+                <button class="rate-pill" data-rate="3">2000 Hz</button>
+                <button class="rate-pill" data-rate="2">4000 Hz</button>
+                <button class="rate-pill" data-rate="1">8000 Hz</button>
+              </div>
+
+              <div class="divider" style="margin:16px 0"></div>
+
+              <div class="inline-toggle">
+                <div>
+                  <div class="sub-bold">RT Smart Anti-Noise Filter</div>
+                  <div class="tiny-muted">Filters magnetic sensor jitter under ultra-low RT sensitivity</div>
+                </div>
+                <label class="m-switch"><input type="checkbox" id="perf-rtsmart" /><span class="m-track"></span></label>
+              </div>
+              <div class="slider-group" id="rtsmart-slider-wrap" style="margin-top:8px">
+                <div class="val-row">
+                  <span>Filter Strength</span>
+                  <span class="num-pill" id="lbl-rtsmart">Off</span>
+                </div>
+                <input type="range" id="rng-rtsmart" min="1" max="15" step="1" value="1" />
+                <div class="hint-ends"><span>Low (Fastest)</span><span>Medium</span><span>High (Most Stable)</span></div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-title">Stability, Calibration &amp; System Keys</div>
+              <div class="inline-toggle">
+                <div>
+                  <div class="sub-bold">Stability Mode (Anti-Mistouch)</div>
+                  <div class="tiny-muted">Prevents mistouches from desk vibration or finger pressure</div>
+                </div>
+                <label class="m-switch"><input type="checkbox" id="perf-stability" /><span class="m-track"></span></label>
+              </div>
+              <div class="inline-toggle">
+                <div>
+                  <div class="sub-bold">Key Debounce Optimization</div>
+                  <div class="tiny-muted">Reduces unintended double-triggers from switch bounce</div>
+                </div>
+                <label class="m-switch"><input type="checkbox" id="perf-debounce" /><span class="m-track"></span></label>
+              </div>
+              <div class="inline-toggle">
+                <div>
+                  <div class="sub-bold">Adaptive Dynamic Calibration</div>
+                  <div class="tiny-muted">Automatically compensates magnetic travel during use</div>
+                </div>
+                <label class="m-switch"><input type="checkbox" id="perf-autocal" /><span class="m-track"></span></label>
+              </div>
+              <div class="divider"></div>
+              <div class="inline-toggle">
+                <span>Disable Windows Key (Gaming Lock)</span>
+                <label class="m-switch"><input type="checkbox" id="perf-lockwin" /><span class="m-track"></span></label>
+              </div>
+              <div class="inline-toggle">
+                <span>Disable Alt + Tab</span>
+                <label class="m-switch"><input type="checkbox" id="perf-lockalttab" /><span class="m-track"></span></label>
+              </div>
+              <div class="inline-toggle">
+                <span>Disable Alt + F4</span>
+                <label class="m-switch"><input type="checkbox" id="perf-lockaltf4" /><span class="m-track"></span></label>
+              </div>
+              <div class="inline-toggle">
+                <span>Switch to macOS Mode</span>
+                <label class="m-switch"><input type="checkbox" id="perf-mac" /><span class="m-track"></span></label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: OTHER SETTINGS -->
+        <section class="tab-view" id="view-other">
+          <div class="other-center">
+            <div class="other-card">
+              <div>
+                <div class="card-title">Keyboard Firmware Version: <span id="lbl-fw-ver">--</span></div>
+                <div class="card-sub">Native Go Win32 HID engine — 100% offline, zero cloud latency</div>
+              </div>
+              <span class="pill-latest">Offline Native</span>
+            </div>
+
+            <div class="other-card">
+              <div>
+                <div class="card-title">Switch Calibration</div>
+                <div class="card-sub">Press every key firmly to bottom-out until green, then click Save</div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="pill-outline" id="btn-cal-start">Start Calibration</button>
+                <button class="pill-dark" id="btn-cal-end" disabled>Save</button>
+              </div>
+            </div>
+
+            <div class="other-card">
+              <div>
+                <div class="card-title">Restore factory settings</div>
+                <div class="card-sub">All onboard profiles and settings will be restored to factory defaults.</div>
+              </div>
+              <button class="pill-outline danger" id="btn-factory-reset">Reset</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Connect / Switch Device Modal -->
+  <div id="device-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">Connect MCHOSE Device</div>
+          <div class="tiny-muted">Select any connected MCHOSE USB keyboard (Ace 68, Ace 60, Jet 75, Mix 87, etc.)</div>
+        </div>
+        <button class="icon-circle" id="btn-close-modal" title="Close">&times;</button>
+      </div>
+      <div id="device-list" class="device-list">
+        <div class="tiny-muted">Scanning USB HID devices...</div>
+      </div>
+      <div class="modal-foot">
+        <button class="pill-outline" id="btn-scan-devices">&#x21BB; Scan USB Devices</button>
+        <div style="display:flex;gap:8px">
+          <button class="pill-outline danger" id="btn-disconnect-dev" style="display:none">Disconnect</button>
+          <button class="pill-dark" id="btn-done-modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-box" class="toast-box"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.txt
+dist/
+build/
+
+# Exported user keyboard profiles / logs
+Ace68-Profile-*.json
+*.log
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
